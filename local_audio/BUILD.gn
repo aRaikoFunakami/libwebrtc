@@ -43,6 +43,13 @@ if (!is_android) {
     sources = [ "test/audio_frame_buffer_test.cc" ]
     deps = [ ":audio_frame_buffer" ]
   }
+
+  # AEC3 のオフライン検証（Phase 1 完了条件、合成 echo で ERLE 測定）
+  rtc_executable("offline_aec_test") {
+    testonly = true
+    sources = [ "test/offline_aec_test.cc" ]
+    deps = [ ":local_audio_processor" ]
+  }
 }
 
 # ルート BUILD.gn からの単一エントリポイント。
@@ -52,6 +59,9 @@ group("local_audio") {
   if (is_android) {
     deps = [ ":local_audio_engine" ]
   } else {
-    deps = [ ":audio_frame_buffer_test" ]
+    deps = [
+      ":audio_frame_buffer_test",
+      ":offline_aec_test",
+    ]
   }
 }
