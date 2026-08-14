@@ -11,11 +11,29 @@ rtc_library("audio_frame_buffer") {
   ]
 }
 
+rtc_library("local_audio_processor") {
+  sources = [
+    "local_audio_processor.cc",
+    "local_audio_processor.h",
+  ]
+  deps = [
+    "../api/audio:aec3_config",
+    "../api/audio:aec3_factory",
+    "../api/audio:audio_processing",
+    "../api/audio:builtin_audio_processing_builder",
+    "../api/environment:environment_factory",
+    "../api:scoped_refptr",
+  ]
+}
+
 # 注: Android 既定の version script は JNI_OnLoad のみ export する。
 # JNI 関数は Java_* 命名規約ではなく JNI_OnLoad + RegisterNatives で登録する。
 rtc_shared_library("local_audio_engine") {
   sources = [ "local_audio_jni.cc" ]
-  deps = [ ":audio_frame_buffer" ]
+  deps = [
+    ":audio_frame_buffer",
+    ":local_audio_processor",
+  ]
 }
 
 if (!is_android) {
