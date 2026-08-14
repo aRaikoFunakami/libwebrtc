@@ -1,10 +1,39 @@
 # local_audio: Android 向け音響前処理エンジン（APM/AEC3 ラッパ）。
-# upstream ファイルは一切変更しない方針（このディレクトリのみ追加）。
-# ビルド: ninja -C out/android_arm64 local_audio:local_audio_engine
+# upstream への変更はルート BUILD.gn の 4 行のみ（それ以外はこのディレクトリに閉じる）。
+# Android: ninja -C out/android_arm64 local_audio:local_audio_engine
+# ホストテスト: ninja -C out/linux_x64 local_audio:audio_frame_buffer_test
 import("../webrtc.gni")
+
+rtc_library("audio_frame_buffer") {
+  sources = [
+    "audio_frame_buffer.cc",
+    "audio_frame_buffer.h",
+  ]
+}
 
 # 注: Android 既定の version script は JNI_OnLoad のみ export する。
 # JNI 関数は Java_* 命名規約ではなく JNI_OnLoad + RegisterNatives で登録する。
 rtc_shared_library("local_audio_engine") {
   sources = [ "local_audio_jni.cc" ]
+  deps = [ ":audio_frame_buffer" ]
+}
+
+if (!is_android) {
+  # Linux ホストで走らせる assert ベース自己テスト（ASan は out dir の args で付与）
+  rtc_executable("audio_frame_buffer_test") {
+    testonly = true
+    sources = [ "test/audio_frame_buffer_test.cc" ]
+    deps = [ ":audio_frame_buffer" ]
+  }
+}
+
+# ルート BUILD.gn からの単一エントリポイント。
+# Android では .so、ホストではテスト群をぶら下げる。
+group("local_audio") {
+  testonly = true
+  if (is_android) {
+    deps = [ ":local_audio_engine" ]
+  } else {
+    deps = [ ":audio_frame_buffer_test" ]
+  }
 }
