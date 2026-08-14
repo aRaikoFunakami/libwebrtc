@@ -1,0 +1,10 @@
+# local_audio: Android 向け音響前処理エンジン（APM/AEC3 ラッパ）。
+# upstream ファイルは一切変更しない方針（このディレクトリのみ追加）。
+# ビルド: ninja -C out/android_arm64 local_audio:local_audio_engine
+import("../webrtc.gni")
+
+# 注: Android 既定の version script は JNI_OnLoad のみ export する。
+# JNI 関数は Java_* 命名規約ではなく JNI_OnLoad + RegisterNatives で登録する。
+rtc_shared_library("local_audio_engine") {
+  sources = [ "local_audio_jni.cc" ]
+}
