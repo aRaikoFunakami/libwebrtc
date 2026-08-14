@@ -39,10 +39,8 @@ if (!build_with_chromium) {
   group("default") {
     testonly = true
     deps = [ ":webrtc" ]
-    if (is_android) {
-      # local_audio: 本 fork 独自の音響前処理エンジン（唯一の upstream 変更点）
-      deps += [ "local_audio:local_audio_engine" ]
-    }
+    # local_audio: 本 fork 独自の音響前処理エンジン（唯一の upstream 変更点）
+    deps += [ "local_audio" ]
     if (rtc_build_examples) {
       deps += [ "examples" ]
     }
