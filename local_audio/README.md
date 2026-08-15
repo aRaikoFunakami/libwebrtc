@@ -8,6 +8,8 @@ WebRTC の Audio Processing Module（APM）/ AEC3 を、通信ライブラリと
 利用側（Android アプリ）は
 [aRaikoFunakami/android-local-voice-agent](https://github.com/aRaikoFunakami/android-local-voice-agent) です。
 
+**構造・実行時フローの図解は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。**
+
 ## 1. upstream への変更内容
 
 upstream（Google WebRTC）のファイルへの変更は **ルート `BUILD.gn` の 4 行のみ**です:
