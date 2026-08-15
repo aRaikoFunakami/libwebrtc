@@ -11,22 +11,22 @@ WebRTC のソースツリーにもビルドシステムにも依存しない。
 
 ```mermaid
 flowchart TB
-    subgraph FORK["aRaikoFunakami/libwebrtc （fork, local-audio ブランチ）"]
+    subgraph FORK["aRaikoFunakami/libwebrtc（fork, local-audio ブランチ）"]
         direction TB
-        UPSTREAM["WebRTC upstream tree\n（branch-heads/7300 起点、無改変）"]
-        ROOT["ルート BUILD.gn\n+4行のみ: is_android → deps local_audio"]
-        LA["local_audio/\n（本ドキュメントの対象）"]
+        UPSTREAM["WebRTC upstream tree<br/>（branch-heads/7300 起点、無改変）"]
+        ROOT["ルート BUILD.gn<br/>+4行のみ: is_android → deps local_audio"]
+        LA["local_audio/<br/>（本ドキュメントの対象）"]
         UPSTREAM --> ROOT --> LA
     end
 
     subgraph APP["aRaikoFunakami/android-local-voice-agent（アプリ）"]
         direction TB
-        SO["liblocal_audio_engine.so\n(jniLibs/arm64-v8a/)"]
-        KOTLIN["LocalAudioEngine.kt\nCapturePipeline / RenderPipeline"]
+        SO["liblocal_audio_engine.so<br/>jniLibs/arm64-v8a/"]
+        KOTLIN["LocalAudioEngine.kt<br/>CapturePipeline / RenderPipeline"]
         SO --> KOTLIN
     end
 
-    LA -- "ninja local_audio:local_audio_engine\n(x86_64 Linuxホストでビルド)" --> SO
+    LA -- "ninja local_audio:local_audio_engine<br/>x86_64 Linuxホストでビルド" --> SO
 ```
 
 ## 2. GN ビルドターゲット依存関係
@@ -36,14 +36,14 @@ flowchart TB
 
 ```mermaid
 flowchart LR
-    ROOT["ルート BUILD.gn\ngroup(\"default\")"] -->|"is_android のみ"| G["group(\"local_audio\")"]
+    ROOT["ルート BUILD.gn<br/>group default に4行追加"] -->|is_androidのみ| G["group local_audio"]
 
     subgraph android["is_android"]
-        ENGINE["rtc_shared_library\nlocal_audio_engine\n(.so)"]
+        ENGINE["rtc_shared_library<br/>local_audio_engine（.so）"]
     end
-    subgraph host["!is_android"]
-        FBT["rtc_executable\naudio_frame_buffer_test"]
-        AEC["rtc_executable\noffline_aec_test"]
+    subgraph host["非Android ホスト"]
+        FBT["rtc_executable<br/>audio_frame_buffer_test"]
+        AEC["rtc_executable<br/>offline_aec_test"]
     end
 
     G -->|Android| ENGINE
@@ -51,12 +51,12 @@ flowchart LR
     G -->|host| AEC
 
     JNI["local_audio_jni.cc"] --> ENGINE
-    PROC["rtc_library\nlocal_audio_processor"] --> ENGINE
-    BUF["rtc_library\naudio_frame_buffer"] --> ENGINE
+    PROC["rtc_library<br/>local_audio_processor"] --> ENGINE
+    BUF["rtc_library<br/>audio_frame_buffer"] --> ENGINE
     PROC --> AEC
     BUF --> FBT
 
-    PROC -.->|deps| APMDEP["upstream:\napi/audio:audio_processing\napi/audio:aec3_factory\napi/audio:builtin_audio_processing_builder\napi/environment:environment_factory"]
+    PROC -.->|deps| APMDEP["upstream:<br/>api/audio:audio_processing<br/>api/audio:aec3_factory<br/>api/audio:builtin_audio_processing_builder<br/>api/environment:environment_factory"]
 ```
 
 ## 3. クラス構成（WebRTC 型の隠蔽）
@@ -75,33 +75,33 @@ classDiagram
         -unique_ptr~Impl~ impl_
     }
     class Impl {
-        <<private, .cc内のみ>>
+        private, .cc内のみ
         scoped_refptr~AudioProcessing~ apm
         StreamConfig stream_config
         atomic~int~ stream_delay_ms
     }
     class AudioProcessing {
-        <<WebRTC upstream>>
+        WebRTC upstream
         ProcessStream()
         ProcessReverseStream()
         set_stream_delay_ms()
     }
     class BuiltinAudioProcessingBuilder {
-        <<WebRTC upstream>>
+        WebRTC upstream
         SetEchoControlFactory()
         Build(Environment) AudioProcessing
     }
     class EchoCanceller3Factory {
-        <<WebRTC upstream>>
+        WebRTC upstream
     }
 
     LocalAudioProcessor *-- Impl : Pimpl
     Impl --> AudioProcessing : 保持
-    LocalAudioProcessor ..> BuiltinAudioProcessingBuilder : Initialize()内で使用
+    LocalAudioProcessor ..> BuiltinAudioProcessingBuilder : Initialize内で使用
     BuiltinAudioProcessingBuilder ..> EchoCanceller3Factory : SetEchoControlFactory
-    BuiltinAudioProcessingBuilder --> AudioProcessing : Build()が生成
+    BuiltinAudioProcessingBuilder --> AudioProcessing : Buildが生成
 
-    note for LocalAudioProcessor "ヘッダ(.h)は\nWebRTC型を含まない"
+    note for LocalAudioProcessor "ヘッダ.hはWebRTC型を含まない"
 ```
 
 ## 4. 実行時データフロー（10ms サイクル、2スレッド構成）
@@ -115,54 +115,54 @@ capture / render は**別スレッド**だが、**同一の `AudioProcessing` �
 ```mermaid
 sequenceDiagram
     participant Mic as AudioRecord
-    participant CT as Capture thread<br/>(Kotlin)
+    participant CT as Capture thread<br/>Kotlin
     participant JNI as local_audio_jni.cc
     participant LAP as LocalAudioProcessor
     participant APM as WebRTC APM/AEC3
-    participant RT as Render thread<br/>(Kotlin)
+    participant RT as Render thread<br/>Kotlin
     participant Spk as AudioTrack
 
-    Note over CT,RT: 起動時: CT が create() で handle 取得、RT はその handle を共有
+    Note over CT,RT: 起動時 CTがcreateでhandle取得、RTはそのhandleを共有
 
-    loop 10ms ごと（capture）
-        Mic->>CT: 480 samples (DirectByteBuffer)
-        CT->>JNI: processCapture(handle, in, out)
-        JNI->>LAP: ProcessCapture()
-        LAP->>APM: set_stream_delay_ms() + ProcessStream()
+    loop 10msごと capture
+        Mic->>CT: 480 samples DirectByteBuffer
+        CT->>JNI: processCapture handle in out
+        JNI->>LAP: ProcessCapture
+        LAP->>APM: set_stream_delay_ms + ProcessStream
         APM-->>LAP: clean PCM
-        LAP-->>JNI: 0=成功
-        JNI-->>CT: out (echo除去済み)
+        LAP-->>JNI: 0 成功
+        JNI-->>CT: out echo除去済み
         CT->>CT: STTへ渡す
     end
 
-    loop 10ms ごと（render、非同期に並行）
-        RT->>RT: TTS/無音 480 samples 用意
-        RT->>JNI: processRender(handle, frame)
-        JNI->>LAP: ProcessRender()
-        LAP->>APM: ProcessReverseStream()<br/>（AEC参照として登録のみ）
+    loop 10msごと render 非同期に並行
+        RT->>RT: TTSまたは無音480samples用意
+        RT->>JNI: processRender handle frame
+        JNI->>LAP: ProcessRender
+        LAP->>APM: ProcessReverseStream AEC参照として登録のみ
         APM-->>LAP: OK
-        RT->>Spk: 同じ frame を再生（write）
+        RT->>Spk: 同じframeを再生 write
     end
 
-    Note over APM: capture threadのみが stream setter/ProcessStream を呼び、<br/>render threadのみが ProcessReverseStream を呼ぶ。<br/>WebRTC APMのスレッド制約に適合。
+    Note over APM: capture threadのみがstream setterとProcessStreamを呼び、<br/>render threadのみがProcessReverseStreamを呼ぶ。<br/>WebRTC APMのスレッド制約に適合。
 ```
 
 ## 5. JNI 境界（DirectByteBuffer 契約）
 
 ```mermaid
 flowchart LR
-    subgraph Kotlin
-        FB["ByteBuffer.allocateDirect(960)\n事前確保・使い回し"]
+    subgraph Kotlin["Kotlin"]
+        FB["ByteBuffer.allocateDirect 960<br/>事前確保・使い回し"]
     end
-    subgraph JNI["local_audio_jni.cc"]
-        GA["GetDirectBufferAddress()\nアロケーションなし"]
-        FH["FromHandle(jlong)\nreinterpret_cast"]
+    subgraph JNILayer["local_audio_jni.cc"]
+        GA["GetDirectBufferAddress<br/>アロケーションなし"]
+        FH["FromHandle jlong<br/>reinterpret_cast"]
     end
-    subgraph Native["LocalAudioProcessor (native heap)"]
-        OBJ["1 create() = 1 インスタンス\nhandle = ポインタのjlongキャスト\n（レジストリなし、破棄はdestroy()呼び出し側責任）"]
+    subgraph Native["LocalAudioProcessor native heap"]
+        OBJ["1回のcreateで1インスタンス<br/>handleはポインタのjlongキャスト<br/>レジストリなし、破棄はdestroy呼び出し側責任"]
     end
 
-    FB -->|"processCapture/processRender\n呼び出しごと"| GA
+    FB -->|processCapture/processRender 呼び出しごと| GA
     GA --> FH --> OBJ
 ```
 
