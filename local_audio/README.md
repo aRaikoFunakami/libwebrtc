@@ -8,7 +8,9 @@ WebRTC の Audio Processing Module（APM）/ AEC3 を、通信ライブラリと
 利用側（Android アプリ）は
 [aRaikoFunakami/android-local-voice-agent](https://github.com/aRaikoFunakami/android-local-voice-agent) です。
 
-**構造・実行時フローの図解は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。**
+本ドキュメントは呼び出す側（アプリ実装者）向けに、変更内容・検証結果・API の使い方と制約を説明する。
+local_audio 自体の内部実装（クラス構成・スレッドモデル・ビルド依存関係）を変更する場合は
+[ARCHITECTURE.md](ARCHITECTURE.md) を参照。
 
 ## 1. upstream への変更内容
 
@@ -83,6 +85,14 @@ revision 更新（`branch-heads/N` の切り替え）時は、この 4 行が新
 
 ### ビルド
 
+Android アプリからこの `.so` を使うだけなら、自前ビルドは不要。
+[Releases](https://github.com/aRaikoFunakami/libwebrtc/releases) にタグ `local-audio-<branch-heads番号>`
+（現行は [`local-audio-7300`](https://github.com/aRaikoFunakami/libwebrtc/releases/tag/local-audio-7300)）
+で `liblocal_audio_engine.so`（android_arm64、stripped）を配布している。
+`android-local-voice-agent` の `scripts/fetch_local_audio_engine.sh` が取得先・配置先・SHA256検証まで行う
+（`README.md` 参照）。
+
+`local_audio` 自体のソースを変更する場合のみ、以下で自前ビルドする。
 x86_64 Linux ホスト限定（WebRTC の prebuilt clang が `Linux_x64` のみのため）。
 
 ```bash
@@ -110,6 +120,8 @@ ninja -C out/linux_asan local_audio:audio_frame_buffer_test local_audio:offline_
 #include "local_audio/local_audio_processor.h"
 
 local_audio::LocalAudioProcessor processor;
+// capture thread と render thread は同一の processor インスタンスを共有すること。
+// 別々に生成すると AEC 状態が分裂する（理由: ARCHITECTURE.md §4）。
 
 local_audio::AudioProcessorConfig config;
 config.enable_aec = true;   // AEC3 (mobile_mode=false固定、AECM不使用)
@@ -149,6 +161,9 @@ reset(handle: Long)
 destroy(handle: Long)
 ```
 
+`handle` は `create()` を capture thread 側で1回呼んで取得し、render thread はその同じ `handle` を
+使うこと（C++ API と同じ制約。理由は ARCHITECTURE.md §4）。
+
 `input`/`output` は 480 samples(960 bytes) の **DirectByteBuffer**（native order）を呼び出し側で
 事前確保して使い回すこと（audio callback path でのアロケーション回避のため）。
 
@@ -175,6 +190,8 @@ SPSC ring buffer。`Push()` は all-or-nothing（空き不足時は chunk 全体
 2. `local-audio` を `release-<N>` へ rebase（衝突面は基本的にルート `BUILD.gn` の4行のみ）
 3. `./out/linux_asan/audio_frame_buffer_test` と `offline_aec_test` を実行し回帰確認
 4. NOTICE を再生成（`android-local-voice-agent/scripts/generate_notices.sh`）し差分をレビュー
+5. Android 向け `.so` をビルドし、タグ `local-audio-<N>` で Release を作り直す（消費側の
+   `fetch_local_audio_engine.sh` の `VERSION`/`SHA256` も更新する）
 
 詳細は
 [docs/webrtc_revision.md](https://github.com/aRaikoFunakami/android-local-voice-agent/blob/main/docs/webrtc_revision.md)。
