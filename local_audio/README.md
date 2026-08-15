@@ -85,6 +85,14 @@ revision 更新（`branch-heads/N` の切り替え）時は、この 4 行が新
 
 ### ビルド
 
+Android アプリからこの `.so` を使うだけなら、自前ビルドは不要。
+[Releases](https://github.com/aRaikoFunakami/libwebrtc/releases) にタグ `local-audio-<branch-heads番号>`
+（現行は [`local-audio-7300`](https://github.com/aRaikoFunakami/libwebrtc/releases/tag/local-audio-7300)）
+で `liblocal_audio_engine.so`（android_arm64、stripped）を配布している。
+`android-local-voice-agent` の `scripts/fetch_local_audio_engine.sh` が取得先・配置先・SHA256検証まで行う
+（`README.md` 参照）。
+
+`local_audio` 自体のソースを変更する場合のみ、以下で自前ビルドする。
 x86_64 Linux ホスト限定（WebRTC の prebuilt clang が `Linux_x64` のみのため）。
 
 ```bash
@@ -182,6 +190,8 @@ SPSC ring buffer。`Push()` は all-or-nothing（空き不足時は chunk 全体
 2. `local-audio` を `release-<N>` へ rebase（衝突面は基本的にルート `BUILD.gn` の4行のみ）
 3. `./out/linux_asan/audio_frame_buffer_test` と `offline_aec_test` を実行し回帰確認
 4. NOTICE を再生成（`android-local-voice-agent/scripts/generate_notices.sh`）し差分をレビュー
+5. Android 向け `.so` をビルドし、タグ `local-audio-<N>` で Release を作り直す（消費側の
+   `fetch_local_audio_engine.sh` の `VERSION`/`SHA256` も更新する）
 
 詳細は
 [docs/webrtc_revision.md](https://github.com/aRaikoFunakami/android-local-voice-agent/blob/main/docs/webrtc_revision.md)。
