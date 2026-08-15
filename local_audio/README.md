@@ -8,7 +8,9 @@ WebRTC の Audio Processing Module（APM）/ AEC3 を、通信ライブラリと
 利用側（Android アプリ）は
 [aRaikoFunakami/android-local-voice-agent](https://github.com/aRaikoFunakami/android-local-voice-agent) です。
 
-**構造・実行時フローの図解は [ARCHITECTURE.md](ARCHITECTURE.md) を参照。**
+本ドキュメントは呼び出す側（アプリ実装者）向けに、変更内容・検証結果・API の使い方と制約を説明する。
+local_audio 自体の内部実装（クラス構成・スレッドモデル・ビルド依存関係）を変更する場合は
+[ARCHITECTURE.md](ARCHITECTURE.md) を参照。
 
 ## 1. upstream への変更内容
 
@@ -110,6 +112,8 @@ ninja -C out/linux_asan local_audio:audio_frame_buffer_test local_audio:offline_
 #include "local_audio/local_audio_processor.h"
 
 local_audio::LocalAudioProcessor processor;
+// capture thread と render thread は同一の processor インスタンスを共有すること。
+// 別々に生成すると AEC 状態が分裂する（理由: ARCHITECTURE.md §4）。
 
 local_audio::AudioProcessorConfig config;
 config.enable_aec = true;   // AEC3 (mobile_mode=false固定、AECM不使用)
@@ -148,6 +152,9 @@ setStreamDelayMs(handle: Long, delayMs: Int)
 reset(handle: Long)
 destroy(handle: Long)
 ```
+
+`handle` は `create()` を capture thread 側で1回呼んで取得し、render thread はその同じ `handle` を
+使うこと（C++ API と同じ制約。理由は ARCHITECTURE.md §4）。
 
 `input`/`output` は 480 samples(960 bytes) の **DirectByteBuffer**（native order）を呼び出し側で
 事前確保して使い回すこと（audio callback path でのアロケーション回避のため）。
