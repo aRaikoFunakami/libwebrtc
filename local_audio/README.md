@@ -89,8 +89,21 @@ Android アプリからこの `.so` を使うだけなら、自前ビルドは�
 [Releases](https://github.com/aRaikoFunakami/libwebrtc/releases) にタグ `local-audio-<branch-heads番号>`
 （現行は [`local-audio-7300`](https://github.com/aRaikoFunakami/libwebrtc/releases/tag/local-audio-7300)）
 で `liblocal_audio_engine.so`（android_arm64、stripped）を配布している。
-`android-local-voice-agent` の `scripts/fetch_local_audio_engine.sh` が取得先・配置先・SHA256検証まで行う
-（`README.md` 参照）。
+
+取得:
+
+```bash
+curl -fL -o liblocal_audio_engine.so \
+  https://github.com/aRaikoFunakami/libwebrtc/releases/download/local-audio-7300/liblocal_audio_engine.so
+```
+
+配置先: Android Gradle Plugin が `.so` を拾う既定ディレクトリ `app/src/main/jniLibs/arm64-v8a/`。
+これ以外のビルド設定は不要（アプリ側の `build.gradle` で対象ABIを `arm64-v8a` に絞っていれば良い）。
+
+呼び出し方（JNI経由）は本ページの「JNI / Kotlin から使う場合」を参照。
+
+`android-local-voice-agent` を使う場合、上記の取得・配置・SHA256検証は
+`scripts/fetch_local_audio_engine.sh` が自動化している。
 
 `local_audio` 自体のソースを変更する場合のみ、以下で自前ビルドする。
 x86_64 Linux ホスト限定（WebRTC の prebuilt clang が `Linux_x64` のみのため）。
